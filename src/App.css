@@ -1,0 +1,42 @@
+/* App.css */
+body{
+  background-color: #1B1D1F !important;
+
+}
+.App {
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  color: #ffff;
+  height: auto;
+  align-items: center;
+
+}
+
+.tree-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  border: 1px solid #ccc;
+  color: white;
+  border-radius: 4px;
+  backdrop-filter: blur(5px);
+  min-width: 80px;
+}
+
+.node-children {
+  display: flex;
+  gap: 20px;
+  height: 100%;
+  margin-top: 10px;
+  color: white;
+}
+
+.node-name {
+  font-weight: bold;
+  color: white;
+}
+.ant-tree-node-content-wrapper.ant-tree-node-selected{
+  background-color: transparent !important;
+}

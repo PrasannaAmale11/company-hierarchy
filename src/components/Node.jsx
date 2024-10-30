@@ -1,22 +1,36 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./styles/simple.css";
-import {
-  MinusCircleOutlined,
-  PlusCircleOutlined,
-} from "@ant-design/icons";
-
+import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import EmployeeDetailModal from "./EmployeeDetailModal";
+import { useDispatch } from "react-redux";
+import { updateTeamMember } from "../slices/hierarchySlice";
+import { Modal } from "antd";
+import Team from "./Team";
 
 const Node = ({
   node,
   visibilityMap,
   toggleVisibility,
-  openModal,
   path = "",
   onAddTeamMember,
 }) => {
-  const nodeKey = `${path}/${node.position}-${node.employee || ""}`;
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [employeeData, setEmployeeData] = useState({});
 
-  
+  const nodeKey = `${path}/${node.position}-${node.employee || ""}`;
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (isModalVisible) {
+      setEmployeeData({
+        employee: node.employee,
+        position: node.position,
+        phone: node.phone,
+        email: node.email,
+      });
+    }
+  }, [node, isModalVisible]);
+
   const isHeadOfDepartment =
     node.position === "Head of Staff/HR" ||
     node.position === "Head of Engineering" ||
@@ -28,21 +42,48 @@ const Node = ({
     !node.position.endsWith("Leader");
 
   const isCEO = node.position === "CEO";
+  const isEmployee =
+    node.position.startsWith("Team") &&
+    (node.position.endsWith("Member") || node.position.endsWith("Leader"));
+
+  const openModal = () => {
+    setEmployeeData({
+      employee: node.employee,
+      position: node.position,
+      phone: node.phone,
+      email: node.email,
+    });
+    setIsModalVisible(true);
+  };
+
+  const handleUpdate = (updatedData) => {
+    const updatePayload = {
+      position: node.position,
+      employee: node.employee,
+      phone: updatedData.phone,
+      email: updatedData.email,
+    };
+    dispatch(updateTeamMember(updatePayload));
+    setIsModalVisible(false);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+  };
 
   return (
     <li key={nodeKey}>
       <div style={{ position: "relative" }}>
         <h2
           className="teamtitle"
-          onClick={() => openModal(node)}
+          onClick={openModal}
           style={{ cursor: "pointer" }}
         >
           {node.employee || ""}
         </h2>
-        {isTeam ? (<p className="positionTitle">{node.position}</p>): (<p className="positionTitle">{node.position}</p>)}
-        
+        <p className="positionTitle">{node.position}</p>
 
-        {isTeam && (<>
+        {isTeam && (
           <button className="addTeamMem" onClick={() => onAddTeamMember(node)}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -55,12 +96,9 @@ const Node = ({
                 d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0S96 57.3 96 128s57.3 128 128 128m89.6 32h-16.7c-22.2 10.2-46.9 16-72.9 16s-50.6-5.8-72.9-16h-16.7C60.2 288 0 348.2 0 422.4V464c0 26.5 21.5 48 48 48h274.9c-2.4-6.8-3.4-14-2.6-21.3l6.8-60.9l1.2-11.1l7.9-7.9l77.3-77.3c-24.5-27.7-60-45.5-99.9-45.5m45.3 145.3l-6.8 61c-1.1 10.2 7.5 18.8 17.6 17.6l60.9-6.8l137.9-137.9l-71.7-71.7zM633 268.9L595.1 231c-9.3-9.3-24.5-9.3-33.8 0l-37.8 37.8l-4.1 4.1l71.8 71.7l41.8-41.8c9.3-9.4 9.3-24.5 0-33.9"
               ></path>
             </svg>
-
           </button>
-          </>
         )}
 
-       
         {!isCEO &&
           !isHeadOfDepartment &&
           node.children &&
@@ -78,6 +116,30 @@ const Node = ({
           )}
       </div>
 
+      {isEmployee && (
+        <EmployeeDetailModal
+          visible={isModalVisible}
+          onClose={() => setIsModalVisible(false)}
+          employeeData={employeeData}
+          onOk={handleUpdate}
+        />
+      )}
+
+      {isHeadOfDepartment && (
+        <Modal
+          title={`${node.employee}'s ${node.position} Department`}
+          open={isModalVisible}
+          onCancel={handleCloseModal}
+          onOk={handleCloseModal}
+        >
+          <ul>
+            {node.children?.map((team, index) => (
+              <Team key={index} team={team} />
+            ))}
+          </ul>
+        </Modal>
+      )}
+
       {(isHeadOfDepartment || isCEO || visibilityMap[nodeKey]) &&
         node.children && (
           <ul>
@@ -87,7 +149,6 @@ const Node = ({
                 node={child}
                 visibilityMap={visibilityMap}
                 toggleVisibility={toggleVisibility}
-                openModal={openModal}
                 path={nodeKey}
                 onAddTeamMember={onAddTeamMember}
               />

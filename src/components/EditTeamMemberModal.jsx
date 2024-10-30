@@ -13,25 +13,19 @@ const EditTeamMemberModal = ({ isVisible, onClose, onAdd, modalData }) => {
   const [deleteTeamMemberVisible, setDeleteTeamMemberVisible] = useState(false);
   const [form] = Form.useForm();
   const [teamMembers, setTeamMembers] = useState(getAllEmployees(modalData));
-  const [teamName, setTeamName] = useState(modalData?.position || "");
   const [changeTeamNameVisible, setChangeTeamNameVisible] = useState(false);
 
   useEffect(() => {
     setTeamMembers(getAllEmployees(modalData));
   }, [modalData]);
-  useEffect(() => {
-    setTeamName(localStorage.getItem(`teamName_${modalData?.id}`) || modalData?.position || "");
-  }, [modalData]);
 
-  const handleSaveTeamName = (newName) => {
-    setTeamName(newName);
-    localStorage.setItem(`teamName_${modalData?.id}`, newName);  
-  };
-
-  const handleAddMember = (newMember) => { 
-    onAdd(newMember);
+  const handleAddMember = (newMember) => {
+    const teamData = {
+      ...newMember,
+      teamId: modalData.id,
+    };
+    onAdd(teamData);
     setAddTeamMemberVisible(false);
-    setTeamMembers((prevMembers) => [...prevMembers, newMember]);
   };
 
   const handleRemoveMember = (memberId) => {
@@ -50,7 +44,6 @@ const EditTeamMemberModal = ({ isVisible, onClose, onAdd, modalData }) => {
       });
     }
   };
- 
 
   return (
     <Modal
@@ -109,17 +102,14 @@ const EditTeamMemberModal = ({ isVisible, onClose, onAdd, modalData }) => {
           Change Team Name
         </Button>
 
-      
         {changeTeamNameVisible && (
-        <ChangeTeamNameModal
-          visible={changeTeamNameVisible}
-          currentTeamName={teamName}
-          onClose={() => setChangeTeamNameVisible(false)}
-          onSave={handleSaveTeamName}
-        />
-      )}
-
-
+          <ChangeTeamNameModal
+            visible={changeTeamNameVisible}
+            currentTeamName={teamName}
+            onClose={() => setChangeTeamNameVisible(false)}
+            onSave={handleSaveTeamName}
+          />
+        )}
 
         {addTeamMemberVisible && (
           <AddMemberForm

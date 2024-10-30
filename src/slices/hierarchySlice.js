@@ -1,5 +1,5 @@
-import { createSlice } from '@reduxjs/toolkit';
-import hierarchyData from '../data/companyData';
+import { createSlice } from "@reduxjs/toolkit";
+import hierarchyData from "../data/companyData";
 
 // Utility functions
 const loadFromLocalStorage = (key, defaultValue) => {
@@ -13,20 +13,20 @@ const saveToLocalStorage = (key, data) => {
 
 // Initial state
 const initialState = {
-  visibilityMap: loadFromLocalStorage('visibilityMap', {}),
+  visibilityMap: loadFromLocalStorage("visibilityMap", {}),
   modalData: null,
   isModalOpen: false,
   isEditTeamMemberModalOpen: false,
-  filteredData: loadFromLocalStorage('filteredData', hierarchyData),
-  localStorageKey: 'teamMembers',
-  teamMembers: loadFromLocalStorage('teamMembers', []),
+  filteredData: loadFromLocalStorage("filteredData", hierarchyData),
+  hierarchyData: loadFromLocalStorage("hierarchyData", hierarchyData),
+  localStorageKey: "teamMembers",
+  teamMembers: loadFromLocalStorage("teamMembers", []),
 };
 
-// Helper function to add a member to data structure
-const addMemberToData = (data, position, newMember) => {
-  data.children.forEach(department => {
-    department.children.forEach(team => {
-      if (team.position === position) {
+const addMemberToData = (data, teamId, newMember) => {
+  data.children.forEach((department) => {
+    department.children.forEach((team) => {
+      if (team.id === teamId) {
         team.children.push(newMember);
       }
     });
@@ -44,32 +44,37 @@ const filterData = (data, filters) => {
   return {
     ...data,
     children: data.children
-      .map(department => ({
+      .map((department) => ({
         ...department,
         children: department.children
-          .map(team => ({
+          .map((team) => ({
             ...team,
-            children: team.children.filter(member => (
-              (member.employee || '').toLowerCase().includes(lowerCaseFilters.name) &&
-              (member.phone || '').includes(phone) &&
-              (member.email || '').toLowerCase().includes(lowerCaseFilters.email)
-            )),
+            children: team.children.filter(
+              (member) =>
+                (member.employee || "")
+                  .toLowerCase()
+                  .includes(lowerCaseFilters.name) &&
+                (member.phone || "").includes(phone) &&
+                (member.email || "")
+                  .toLowerCase()
+                  .includes(lowerCaseFilters.email)
+            ),
           }))
-          .filter(team => team.children.length > 0),
+          .filter((team) => team.children.length > 0),
       }))
-      .filter(department => department.children.length > 0),
+      .filter((department) => department.children.length > 0),
   };
 };
 
 // Slice
 const hierarchySlice = createSlice({
-  name: 'hierarchy',
+  name: "hierarchy",
   initialState,
   reducers: {
     toggleVisibility(state, action) {
       const key = action.payload;
       state.visibilityMap[key] = !state.visibilityMap[key];
-      saveToLocalStorage('visibilityMap', state.visibilityMap);
+      saveToLocalStorage("visibilityMap", state.visibilityMap);
     },
     openModal(state, action) {
       state.modalData = action.payload;
@@ -88,26 +93,30 @@ const hierarchySlice = createSlice({
     },
     filterEmployees(state, action) {
       const originalData = {
-        ...hierarchyData,
-        children: hierarchyData.children.map(department => ({
+        ...state.hierarchyData,
+        children: state.hierarchyData.children.map((department) => ({
           ...department,
-          children: department.children.map(team => ({
+          children: department.children.map((team) => ({
             ...team,
             children: [
               ...team.children,
-              ...state.teamMembers.filter(member => member.teamId === team.position),
+              ...state.teamMembers.filter(
+                (member) => member.teamId === team.position
+              ),
             ],
           })),
         })),
       };
       const filtered = filterData(originalData, action.payload);
-      state.filteredData = filtered.children.length > 0 ? filtered : originalData;
-      saveToLocalStorage('filteredData', state.filteredData);
+      state.filteredData =
+        filtered.children.length > 0 ? filtered : originalData;
+      saveToLocalStorage("filteredData", state.filteredData);
     },
+
     addTeamMember(state, action) {
       const newMember = action.payload;
       const newMemberData = {
-        position: 'Team Member',
+        position: "Team Member",
         employee: newMember.name,
         phone: newMember.phone,
         email: newMember.email,
@@ -116,33 +125,63 @@ const hierarchySlice = createSlice({
       state.teamMembers.push(newMember);
       saveToLocalStorage(state.localStorageKey, state.teamMembers);
 
-      const position = state.modalData?.position;
-      addMemberToData(state.filteredData, position, newMemberData);
-      addMemberToData(hierarchyData, position, newMemberData);
+      const teamId = newMember.teamId;
+      addMemberToData(state.filteredData, teamId, newMemberData);
+      addMemberToData(state.hierarchyData, teamId, newMemberData);
 
-      saveToLocalStorage('filteredData', state.filteredData);
-      saveToLocalStorage('hierarchyData', hierarchyData);
+      saveToLocalStorage("filteredData", state.filteredData);
+      saveToLocalStorage("hierarchyData", state.hierarchyData);
     },
+
+    updateTeamMember(state, action) {
+      const { position, employee, ...updatedData } = action.payload;
+
+      const updateMemberInData = (data) => {
+        data.children.forEach((department) => {
+          department.children.forEach((team) => {
+            team.children.forEach((member, index) => {
+              if (
+                member.position === position &&
+                member.employee === employee
+              ) {
+                team.children[index] = { ...member, ...updatedData };
+              }
+            });
+          });
+        });
+      };
+
+      updateMemberInData(state.filteredData);
+      updateMemberInData(state.hierarchyData);
+
+      saveToLocalStorage("filteredData", state.filteredData);
+      saveToLocalStorage("hierarchyData", state.hierarchyData);
+    },
+
     deleteTeamMemberSlice(state, action) {
       const memberIdToDelete = action.payload;
-      const updatedMembers = state.teamMembers.filter(member => member.employee !== memberIdToDelete);
+      const updatedMembers = state.teamMembers.filter(
+        (member) => member.employee !== memberIdToDelete
+      );
 
       const removeMemberFromData = (data) => {
-        data.children.forEach(department => {
-          department.children.forEach(team => {
-            team.children = team.children.filter(member => member.employee !== memberIdToDelete);
+        data.children.forEach((department) => {
+          department.children.forEach((team) => {
+            team.children = team.children.filter(
+              (member) => member.employee !== memberIdToDelete
+            );
           });
         });
       };
 
       removeMemberFromData(state.filteredData);
-      removeMemberFromData(hierarchyData);
+      removeMemberFromData(state.hierarchyData);
 
       state.teamMembers = updatedMembers;
       saveToLocalStorage(state.localStorageKey, updatedMembers);
-      saveToLocalStorage('filteredData', state.filteredData);
+      saveToLocalStorage("filteredData", state.filteredData);
+      saveToLocalStorage("hierarchyData", state.hierarchyData);
     },
-    
   },
 });
 
@@ -154,6 +193,7 @@ export const {
   closeEditTeamMemberModal,
   filterEmployees,
   addTeamMember,
+  updateTeamMember,
   deleteTeamMemberSlice,
 } = hierarchySlice.actions;
 

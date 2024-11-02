@@ -9,6 +9,13 @@ const EmployeeFilter = ({ onFilter }) => {
     onFilter({ name, phone, email });
   };
 
+  const resetFields = () => {
+    setName("");
+    setPhone("");
+    setEmail("");
+    onFilter({ name: "", phone: "", email: "" }); 
+  };
+
   return (
     <div
       style={{
@@ -40,6 +47,7 @@ const EmployeeFilter = ({ onFilter }) => {
         onChange={(e) => setEmail(e.target.value)}
       />
       <button onClick={handleFilter}>Filter</button>
+      <button onClick={resetFields}>Reset</button>
     </div>
   );
 };

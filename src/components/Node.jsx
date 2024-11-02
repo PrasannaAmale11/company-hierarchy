@@ -3,11 +3,12 @@ import "./styles/simple.css";
 import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import EmployeeDetailModal from "./EmployeeDetailModal";
 import { useDispatch } from "react-redux";
-import { updateTeamMember } from "../slices/hierarchySlice";
+import { changedTeam, updateTeamMember } from "../slices/hierarchySlice";
 import { Form, Modal } from "antd";
 import Team from "./Team";
 import ChangeTeam from "./ChangeTeam";
-import { getAllDepartments, getAllTeams } from "../utils/getTeams";
+import { extractDepartmentsAndTeams } from "../utils/getTeams";
+import hierarchyData from "../data/companyData";
 
 const Node = ({
   node,
@@ -15,15 +16,21 @@ const Node = ({
   toggleVisibility,
   path = "",
   onAddTeamMember,
+  employee,
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [employeeData, setEmployeeData] = useState({});
+  const [employeeDataId, setEmployeeDataId] = useState({});
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [isChangeTeamVisible, setChangeTeamVisible] = useState(false);
-
+  const { departments, teams } = extractDepartmentsAndTeams(hierarchyData);
 
   const nodeKey = `${path}/${node.position}-${node.employee || ""}`;
   const dispatch = useDispatch();
   const [form] = Form.useForm();
+  function getRandomInt(max) {
+    return Math.floor(Math.random() * max);
+  }
 
   useEffect(() => {
     if (isModalVisible) {
@@ -36,8 +43,17 @@ const Node = ({
     }
   }, [node, isModalVisible]);
 
-
-  
+  useEffect(() => {
+    if (isChangeTeamVisible) {
+      setEmployeeDataId({
+        employee: node.employee,
+        position: node.position,
+        phone: node.phone,
+        email: node.email,
+        id: node.id || null,
+      });
+    }
+  }, [node, isChangeTeamVisible]);
 
   const isHeadOfDepartment =
     node.position === "Head of Staff/HR" ||
@@ -80,21 +96,20 @@ const Node = ({
     setIsModalVisible(false);
   };
 
-  const handleOpenChangeTeam = () => {
+  const handleOpenChangeTeam = (id) => {
+    console.log("Opening Change Team for Employee ID:", id);
+    setSelectedEmployeeId(id);
     setChangeTeamVisible(true);
+  };
+
+  const handleChangeTeam = ({ employeeId, newTeamId, department }) => {
+    console.log(employeeId, newTeamId, department);
+    dispatch(changedTeam({ id: employeeId, newTeamId, department }));
   };
 
   const handleCloseChangeTeam = () => {
     setChangeTeamVisible(false);
   };
-  const handleChangeTeam = (newTeam) => {
-    // Logic to change the employee's team
-    console.log("Changed to team:", newTeam);
-    // You can dispatch an action here if needed
-    handleCloseChangeTeam(); // Close the ChangeTeam modal after the operation
-  };
-
-  
 
   return (
     <li key={nodeKey}>
@@ -129,7 +144,10 @@ const Node = ({
               </svg>
             </button>
 
-            <button className="btn" onClick={handleOpenChangeTeam}>
+            <button
+              className="btn"
+              onClick={() => handleOpenChangeTeam(node.id)}
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="1em"
@@ -196,8 +214,10 @@ const Node = ({
           <ChangeTeam
             visible={isChangeTeamVisible}
             onClose={handleCloseChangeTeam}
+            teams={teams}
+            departments={departments}
             onChangeTeam={handleChangeTeam}
-            node={node}
+            employeeDataId={employeeDataId}
           />
         </>
       )}
@@ -221,14 +241,16 @@ const Node = ({
         node.children && (
           <ul>
             {node.children.map((child, index) => (
-              <Node
-                key={`${nodeKey}-${index}`}
-                node={child}
-                visibilityMap={visibilityMap}
-                toggleVisibility={toggleVisibility}
-                path={nodeKey}
-                onAddTeamMember={onAddTeamMember}
-              />
+              <>
+                <Node
+                  key={`${nodeKey}-${index} ${getRandomInt(5)}`}
+                  node={child}
+                  visibilityMap={visibilityMap}
+                  toggleVisibility={toggleVisibility}
+                  path={nodeKey}
+                  onAddTeamMember={onAddTeamMember}
+                />
+              </>
             ))}
           </ul>
         )}

@@ -104,3 +104,48 @@ export const getTeamsAndDepartments = (data) => {
   traverse(data);
   return { teams, departments };
 };
+
+export const extractDepartmentsAndTeams = (data) => {
+  const departments = [];
+  const teams = [];
+
+  const traverse = (node) => {
+    if (node.children) {
+      if (node.position.includes('Head')) {
+        departments.push(node);
+      }
+      node.children.forEach(traverse);
+    }
+  };
+
+  traverse(data);
+
+  // Now extract teams from the departments
+  departments.forEach(department => {
+    if (department.children) {
+      department.children.forEach(team => {
+        teams.push(team);
+      });
+    }
+  });
+
+  return { departments, teams };
+};
+
+export const flattenHierarchy = (data) => {
+  let result = [];
+
+  const recurse = (node) => {
+    const { id, employee, position, phone, email, children } = node;
+    result.push({ id, employee, position, phone, email });
+    if (children) {
+      children.forEach(recurse);
+    }
+  };
+
+  recurse(data);
+  return result;
+};
+
+
+

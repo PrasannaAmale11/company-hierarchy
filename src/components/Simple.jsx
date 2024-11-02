@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Modal } from "antd";
 import Team from "./Team";
@@ -13,7 +13,6 @@ import {
   closeEditTeamMemberModal,
   filterEmployees,
   addTeamMember,
-  deleteTeamMemberSlice,
   updateTeamMember,
 } from "../slices/hierarchySlice";
 
@@ -37,8 +36,7 @@ const Simple = () => {
   const handleFilterEmployees = (filters) => dispatch(filterEmployees(filters));
   const handleAddTeamMember = (node) => dispatch(openEditTeamMemberModal(node));
   const handleAddMember = (newMember) => dispatch(addTeamMember(newMember));
-  const handleRemoveMember = (memberId) =>
-    dispatch(deleteTeamMemberSlice(memberId));
+
   const handleMemberUpdate = (values) => {
     const updatePayload = {
       position: values.position,
@@ -61,7 +59,7 @@ const Simple = () => {
             openModal={handleOpenModal}
             onAddTeamMember={handleAddTeamMember}
             modalData={modalData}
-            onOk={handleMemberUpdate}
+            onUpdate={handleMemberUpdate}
           />
         )}
       </ul>
@@ -85,7 +83,6 @@ const Simple = () => {
         onAdd={handleAddMember}
         modalData={modalData}
         teamMembers={teamMembers}
-        // onChangeTeamName={handleTeamNameChange}
       />
     </div>
   );

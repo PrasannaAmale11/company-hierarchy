@@ -1,29 +1,58 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Select, Button } from 'antd';
-import { getTeamsAndDepartments } from '../utils/getTeams'; // Import the combined function
+import hierarchyData from '../data/companyData';
 
-const ChangeTeam = ({ visible, onClose, onChangeTeam, node }) => {
-  const [departments, setDepartments] = useState([]);
-  const [teams, setTeams] = useState([]);
+const ChangeTeam = ({ visible, onClose, onChangeTeam, employeeDataId }) => {
+  // Helper functions to parse departments and teams from hierarchyData
+  const extractDepartments = (data) => {
+    return data.children.map((department) => ({
+      id: department.id,
+      position: department.position,
+    }));
+  };
 
-  useEffect(() => {
-    // Get all teams and departments from the node
-    const { teams, departments } = getTeamsAndDepartments(node);
-    setTeams(teams);
-    setDepartments(departments);
-  }, [node]);
+  const extractTeamsByDepartment = (data, departmentName) => {
+    const department = data.children.find((dept) => dept.position === departmentName);
+    return department 
+      ? department.children.map((team) => ({
+          id: team.id,
+          position: team.position,
+        }))
+      : [];
+  };
 
   const [form] = Form.useForm();
-
+  const [departments] = useState(extractDepartments(hierarchyData)); // Extract departments once
+  const [filteredTeams, setFilteredTeams] = useState([]);
   const handleFinish = (values) => {
-    const selectedTeam = values.team; // Get the selected team
-    const selectedDepartment = values.department; // Get the selected department
+    const selectedTeamId = values.team; // Capture the selected team ID
+    const selectedDepartment = values.department;
 
-    // Combine selected department and team for onChangeTeam function if needed
-    onChangeTeam({ team: selectedTeam, department: selectedDepartment });
+    // Ensure employeeDataId is defined and pass the necessary data
+    console.log('Employee Data ID:', employeeDataId); // Log the employee data ID
 
-    form.resetFields(); // Reset the form fields after submission
-    onClose(); // Close the modal
+    if (employeeDataId && employeeDataId.id) { // Check if id exists
+        onChangeTeam({
+            employeeId: employeeDataId.id, // Correctly pass the employee ID
+            newTeamId: selectedTeamId, // Use selected team ID
+            department: selectedDepartment,
+        });
+    } else {
+        console.error('No valid employee ID to change team.');
+    }
+
+    form.resetFields();
+    onClose();
+};
+
+
+
+  const handleDepartmentChange = (department) => {
+    // Extract teams for the selected department
+    const teamsInDepartment = extractTeamsByDepartment(hierarchyData, department);
+    console.log("Filtered Teams:", teamsInDepartment); // Log teams to verify
+    setFilteredTeams(teamsInDepartment);
+    form.setFieldsValue({ team: undefined }); // Reset team selection on department change
   };
 
   return (
@@ -39,16 +68,15 @@ const ChangeTeam = ({ visible, onClose, onChangeTeam, node }) => {
           label="Select Department"
           rules={[{ required: true, message: 'Please select a department!' }]}
         >
-          <Select placeholder="Choose a department">
-            {departments.length > 0 ? (
-              departments.map(department => (
-                <Select.Option key={department.id} value={department.position}>
-                  {department.position}
-                </Select.Option>
-              ))
-            ) : (
-              <Select.Option disabled>No departments available</Select.Option>
-            )}
+          <Select 
+            placeholder="Choose a department" 
+            onChange={handleDepartmentChange} // Set up department change handler
+          >
+            {departments.map((department) => (
+              <Select.Option key={department.id} value={department.position}>
+                {department.position}
+              </Select.Option>
+            ))}
           </Select>
         </Form.Item>
 
@@ -57,16 +85,12 @@ const ChangeTeam = ({ visible, onClose, onChangeTeam, node }) => {
           label="Select Team"
           rules={[{ required: true, message: 'Please select a team!' }]}
         >
-          <Select placeholder="Choose a team">
-            {teams.length > 0 ? (
-              teams.map(team => (
-                <Select.Option key={team.id} value={team.position}>
-                  {team.position}
-                </Select.Option>
-              ))
-            ) : (
-              <Select.Option disabled>No teams available</Select.Option>
-            )}
+          <Select placeholder="Choose a team" disabled={filteredTeams.length === 0}>
+            {filteredTeams.map((team) => (
+              <Select.Option key={team.id} value={team.id}> {/* Ensure this is the team ID */}
+                {team.position}
+              </Select.Option>
+            ))}
           </Select>
         </Form.Item>
 
@@ -84,5 +108,3 @@ const ChangeTeam = ({ visible, onClose, onChangeTeam, node }) => {
 };
 
 export default ChangeTeam;
-
-// getTeamsAndDepartments function remains unchanged

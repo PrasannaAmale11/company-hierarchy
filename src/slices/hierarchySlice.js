@@ -1,7 +1,8 @@
 import { createSlice } from "@reduxjs/toolkit";
 import hierarchyData from "../data/companyData";
+import { flattenHierarchy } from "../utils/getTeams";
 
-// Utility functions
+
 const loadFromLocalStorage = (key, defaultValue) => {
   const storedData = localStorage.getItem(key);
   return storedData ? JSON.parse(storedData) : defaultValue;
@@ -21,6 +22,7 @@ const initialState = {
   hierarchyData: loadFromLocalStorage("hierarchyData", hierarchyData),
   localStorageKey: "teamMembers",
   teamMembers: loadFromLocalStorage("teamMembers", []),
+  employees: loadFromLocalStorage("employees", []),
 };
 
 const addMemberToData = (data, teamId, newMember) => {
@@ -32,6 +34,26 @@ const addMemberToData = (data, teamId, newMember) => {
     });
   });
 };
+
+const removeMemberFromCurrentTeam = (data, memberId) => {
+  data.children.forEach((department) => {
+    department.children.forEach((team) => {
+      team.children = team.children.filter((member) => member.id !== memberId);
+    });
+  });
+};
+
+function addMemberToNewTeam(hierarchyData, newTeamId, member) {
+  
+  for (const department of hierarchyData.children) {
+    for (const team of department.children) {
+      if (team.id === newTeamId) {
+        team.children.push(member); 
+        return;
+      }
+    }
+  }
+}
 
 // Helper function to filter data
 const filterData = (data, filters) => {
@@ -116,14 +138,22 @@ const hierarchySlice = createSlice({
     addTeamMember(state, action) {
       const newMember = action.payload;
       const newMemberData = {
+        id: `${Date.now()}-${Math.floor(Math.random() * 100)}`,
         position: "Team Member",
         employee: newMember.name,
         phone: newMember.phone,
         email: newMember.email,
       };
 
-      state.teamMembers.push(newMember);
+      state.teamMembers.push(newMemberData);
       saveToLocalStorage(state.localStorageKey, state.teamMembers);
+
+      state.employees.push({
+        id: newMemberData.id,
+        teamId: newMember.teamId,
+        department: newMember.department,
+        ...newMemberData,
+      });
 
       const teamId = newMember.teamId;
       addMemberToData(state.filteredData, teamId, newMemberData);
@@ -132,31 +162,29 @@ const hierarchySlice = createSlice({
       saveToLocalStorage("filteredData", state.filteredData);
       saveToLocalStorage("hierarchyData", state.hierarchyData);
     },
-
     updateTeamMember(state, action) {
       const { id, ...updatedData } = action.payload;
-  
+
       const updateMemberInData = (data) => {
-          data.children.forEach((department) => {
-              department.children.forEach((team) => {
-                  team.children.forEach((member, index) => {
-                      if (member.id === id) { // Match based on unique id
-                          team.children[index] = { ...member, ...updatedData };
-                      }
-                  });
-              });
+        data.children.forEach((department) => {
+          department.children.forEach((team) => {
+            team.children.forEach((member, index) => {
+              if (member.id === id) {
+                team.children[index] = { ...member, ...updatedData };
+              }
+            });
           });
+        });
       };
-  
-      // Update both filteredData and hierarchyData
+
+     
       updateMemberInData(state.filteredData);
       updateMemberInData(state.hierarchyData);
-  
-      // Save updated hierarchy data to local storage
+
+     
       saveToLocalStorage("filteredData", state.filteredData);
       saveToLocalStorage("hierarchyData", state.hierarchyData);
-  },
-  
+    },
 
     deleteTeamMemberSlice(state, action) {
       const memberIdToDelete = action.payload;
@@ -182,6 +210,48 @@ const hierarchySlice = createSlice({
       saveToLocalStorage("filteredData", state.filteredData);
       saveToLocalStorage("hierarchyData", state.hierarchyData);
     },
+    changedTeam(state, action) {
+      const { id, newTeamId, department } = action.payload;
+
+      if (!id) {
+        return;
+      }
+
+      console.log(`Searching for Employee ID: ${id}`);
+
+      const flattenedEmployees = flattenHierarchy(state.hierarchyData);
+      console.log(
+        "Flattened Employees:",
+        JSON.stringify(flattenedEmployees, null, 3)
+      );
+
+      const employee = flattenedEmployees.find((emp) => emp.id === id);
+      if (employee) {
+        const originalEmployee = state.employees.find((emp) => emp.id === id);
+        if (originalEmployee) {
+          removeMemberFromCurrentTeam(state.hierarchyData, id);
+
+          originalEmployee.teamId = newTeamId;
+          originalEmployee.department = department;
+
+          addMemberToNewTeam(state.hierarchyData, newTeamId, originalEmployee);
+
+          saveToLocalStorage("hierarchyData", state.hierarchyData);
+          saveToLocalStorage(state.localStorageKey, state.teamMembers);
+          saveToLocalStorage("employees", state.employees);
+
+          console.log(`Employee with ID ${id} moved to Team ${newTeamId}.`);
+        } else {
+          console.error(
+            `Original employee with ID ${id} not found in state.employees.`
+          );
+        }
+      } else {
+        console.error(
+          `Employee with ID ${id} not found in flattened hierarchy.`
+        );
+      }
+    },
   },
 });
 
@@ -195,6 +265,7 @@ export const {
   addTeamMember,
   updateTeamMember,
   deleteTeamMemberSlice,
+  changedTeam,
 } = hierarchySlice.actions;
 
 export default hierarchySlice.reducer;

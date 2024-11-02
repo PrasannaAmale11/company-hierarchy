@@ -119,3 +119,19 @@
     left: 0;
     cursor: pointer;
 }
+.btn{
+    background: none;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+.editButton{
+    position: absolute;
+    width: 100%;
+    top: 1px;
+    left: 0;
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+    justify-content: space-between;
+}

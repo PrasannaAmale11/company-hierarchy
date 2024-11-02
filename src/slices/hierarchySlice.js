@@ -134,29 +134,29 @@ const hierarchySlice = createSlice({
     },
 
     updateTeamMember(state, action) {
-      const { position, employee, ...updatedData } = action.payload;
-
+      const { id, ...updatedData } = action.payload;
+  
       const updateMemberInData = (data) => {
-        data.children.forEach((department) => {
-          department.children.forEach((team) => {
-            team.children.forEach((member, index) => {
-              if (
-                member.position === position &&
-                member.employee === employee
-              ) {
-                team.children[index] = { ...member, ...updatedData };
-              }
-            });
+          data.children.forEach((department) => {
+              department.children.forEach((team) => {
+                  team.children.forEach((member, index) => {
+                      if (member.id === id) { // Match based on unique id
+                          team.children[index] = { ...member, ...updatedData };
+                      }
+                  });
+              });
           });
-        });
       };
-
+  
+      // Update both filteredData and hierarchyData
       updateMemberInData(state.filteredData);
       updateMemberInData(state.hierarchyData);
-
+  
+      // Save updated hierarchy data to local storage
       saveToLocalStorage("filteredData", state.filteredData);
       saveToLocalStorage("hierarchyData", state.hierarchyData);
-    },
+  },
+  
 
     deleteTeamMemberSlice(state, action) {
       const memberIdToDelete = action.payload;

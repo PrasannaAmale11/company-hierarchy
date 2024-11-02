@@ -4,8 +4,10 @@ import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import EmployeeDetailModal from "./EmployeeDetailModal";
 import { useDispatch } from "react-redux";
 import { updateTeamMember } from "../slices/hierarchySlice";
-import { Modal } from "antd";
+import { Form, Modal } from "antd";
 import Team from "./Team";
+import ChangeTeam from "./ChangeTeam";
+import { getAllDepartments, getAllTeams } from "../utils/getTeams";
 
 const Node = ({
   node,
@@ -16,9 +18,12 @@ const Node = ({
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [employeeData, setEmployeeData] = useState({});
+  const [isChangeTeamVisible, setChangeTeamVisible] = useState(false);
+
 
   const nodeKey = `${path}/${node.position}-${node.employee || ""}`;
   const dispatch = useDispatch();
+  const [form] = Form.useForm();
 
   useEffect(() => {
     if (isModalVisible) {
@@ -30,6 +35,9 @@ const Node = ({
       });
     }
   }, [node, isModalVisible]);
+
+
+  
 
   const isHeadOfDepartment =
     node.position === "Head of Staff/HR" ||
@@ -58,8 +66,9 @@ const Node = ({
 
   const handleUpdate = (updatedData) => {
     const updatePayload = {
+      id: node.id,
       position: node.position,
-      employee: node.employee,
+      employee: updatedData.employee,
       phone: updatedData.phone,
       email: updatedData.email,
     };
@@ -70,6 +79,22 @@ const Node = ({
   const handleCloseModal = () => {
     setIsModalVisible(false);
   };
+
+  const handleOpenChangeTeam = () => {
+    setChangeTeamVisible(true);
+  };
+
+  const handleCloseChangeTeam = () => {
+    setChangeTeamVisible(false);
+  };
+  const handleChangeTeam = (newTeam) => {
+    // Logic to change the employee's team
+    console.log("Changed to team:", newTeam);
+    // You can dispatch an action here if needed
+    handleCloseChangeTeam(); // Close the ChangeTeam modal after the operation
+  };
+
+  
 
   return (
     <li key={nodeKey}>
@@ -82,6 +107,48 @@ const Node = ({
           {node.employee || ""}
         </h2>
         <p className="positionTitle">{node.position}</p>
+        {isEmployee && (
+          <span className="editButton">
+            <button className="btn" onClick={openModal}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="1em"
+                height="1em"
+                viewBox="0 0 24 24"
+              >
+                <g
+                  fill="none"
+                  stroke="white"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                >
+                  <path d="M7 7H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1"></path>
+                  <path d="M20.385 6.585a2.1 2.1 0 0 0-2.97-2.97L9 12v3h3zM16 5l3 3"></path>
+                </g>
+              </svg>
+            </button>
+
+            <button className="btn" onClick={handleOpenChangeTeam}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="1em"
+                height="1em"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="none"
+                  stroke="white"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9 5h10M5 5h.009M5 11.004h.009M5 17.007h.009M9 11.004h10M9 17.007h10m0 0c.003-.26-.18-.518-.404-.707l-1.602-1.274M19 17.007c-.003.252-.186.506-.404.708L16.994 19"
+                  color="white"
+                ></path>
+              </svg>
+            </button>
+          </span>
+        )}
 
         {isTeam && (
           <button className="addTeamMem" onClick={() => onAddTeamMember(node)}>
@@ -117,12 +184,22 @@ const Node = ({
       </div>
 
       {isEmployee && (
-        <EmployeeDetailModal
-          visible={isModalVisible}
-          onClose={() => setIsModalVisible(false)}
-          employeeData={employeeData}
-          onOk={handleUpdate}
-        />
+        <>
+          <EmployeeDetailModal
+            form={form}
+            visible={isModalVisible}
+            onClose={() => setIsModalVisible(false)}
+            employeeData={employeeData}
+            onUpdate={handleUpdate}
+          />
+
+          <ChangeTeam
+            visible={isChangeTeamVisible}
+            onClose={handleCloseChangeTeam}
+            onChangeTeam={handleChangeTeam}
+            node={node}
+          />
+        </>
       )}
 
       {isHeadOfDepartment && (

@@ -1,14 +1,14 @@
 import { Form, Input, Modal } from "antd";
 import React from "react";
 
-const EmployeeDetailModal = ({ visible, onClose, employeeData, onOk }) => {
-  const [form] = Form.useForm();
+const EmployeeDetailModal = ({ visible, onClose, employeeData, onUpdate,form }) => {
+  
 
   const handleOk = () => {
     form
       .validateFields()
       .then((values) => {
-        onOk({ ...employeeData, ...values });
+        onUpdate({ ...employeeData, ...values });
       })
       .catch((info) => {
         console.log("Validation Failed:", info);
